@@ -156,6 +156,19 @@ input{font:inherit;color:inherit}
 .mlab{display:flex;gap:8px;margin-top:8px}
 .mlab span{flex:1;min-width:0;text-align:center;font-size:12px;color:var(--muted);font-weight:600}
 
+/* ---------- cards warming ---------- */
+.cardic{width:48px;height:33px;border-radius:8px;color:#fff;flex:none;position:relative;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 6px 4px;font:700 10px/1 var(--f-body);letter-spacing:.04em;font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);background-image:linear-gradient(135deg,rgba(255,255,255,.22),rgba(0,0,0,.18))}
+.cardic::before{content:"";position:absolute;left:6px;top:6px;width:10px;height:8px;border-radius:2px;background:rgba(255,255,255,.75)}
+.prow .r>span:first-child{flex-wrap:wrap;row-gap:4px}
+.paybtn.fire{color:#F97316;background:color-mix(in srgb,#F97316 15%,transparent)}
+.hrow{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:14px}
+.hrow+.hrow{border-top:1px solid var(--line)}
+.hrow .mid{gap:1px}
+.hrow .t2{font-size:12px}
+.hdel{height:30px;padding:0 10px;border-radius:9px;background:var(--surface-2);color:var(--muted);font-size:12.5px;font-weight:700;flex:none;transition:background .2s,color .2s}
+.hdel.armed{background:var(--danger);color:#fff}
+.hist{max-height:240px;overflow-y:auto;margin-top:-4px}
+
 /* ---------- widgets ---------- */
 .spark{display:flex;align-items:flex-end;gap:3px;height:46px;margin-top:12px}
 .spark i{flex:1;border-radius:3px;background:var(--pa);opacity:.55;height:0;transition:height .8s var(--ease);min-height:2px}
@@ -364,7 +377,7 @@ input{font:inherit;color:inherit}
   .view{display:block;columns:2;column-gap:16px}
   .view>*{break-inside:avoid;margin-bottom:16px}
   .view>.btn{display:block}
-  .view .mswitch,.view>.seg,.v-plans>.hero,.v-capital>.hero{column-span:all}
+  .view .mswitch,.view>.seg,.v-plans>.hero,.v-capital>.hero,.v-cards>.hero{column-span:all}
   .view.v-hist{columns:1;max-width:760px}
   .view.v-hist>*{margin-bottom:10px}
   .sheet{left:50%;right:auto;top:50%;bottom:auto;margin:0;width:min(480px,calc(100% - 48px));max-height:min(90vh,880px);border-radius:24px;padding:18px 22px 22px;opacity:0;transform:translate(-50%,-46%) scale(.96);transition:transform .35s var(--ease),opacity .25s}
@@ -552,6 +565,52 @@ input{font:inherit;color:inherit}
   <button class="btn danger" id="aDel" type="button" hidden>Удалить</button>
 </section>
 
+<!-- Карта для прогрева -->
+<section class="sheet" id="sCard" role="dialog" aria-modal="true" aria-labelledby="kTitle">
+  <div class="grab"></div>
+  <div class="sh-h"><h3 id="kTitle">Новая карта</h3><button class="x" data-close aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="inrow" style="grid-template-columns:minmax(0,1fr) 110px">
+    <label class="field"><input id="kBank" type="text" maxlength="30" placeholder="Банк, например Монобанк" autocomplete="off"></label>
+    <label class="field"><span class="suf">••</span><input id="kLast" type="text" inputmode="numeric" maxlength="4" placeholder="4521" autocomplete="off"></label>
+  </div>
+  <div class="lbl2">Чья карта</div>
+  <div class="whos" id="kWho"></div>
+  <div class="lbl2">Греть раз в</div>
+  <div class="seg" id="kEvery" style="--n:4">
+    <span class="ind"></span>
+    <button type="button" data-ke="14">2 недели</button>
+    <button type="button" data-ke="30">Месяц</button>
+    <button type="button" data-ke="45">45 дней</button>
+    <button type="button" data-ke="60">2 месяца</button>
+  </div>
+  <div class="lbl2">Цвет</div>
+  <div class="swatches" id="kColors"></div>
+  <div id="kHistWrap" hidden>
+    <div class="lbl2" style="margin-bottom:6px">История покупок</div>
+    <div class="hist" id="kHist"></div>
+  </div>
+  <button class="btn" id="kSave" type="button">Сохранить</button>
+  <button class="btn danger" id="kDel" type="button" hidden>Удалить карту</button>
+</section>
+
+<!-- Отметить прогрев -->
+<section class="sheet" id="sWarm" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+  <div class="grab"></div>
+  <div class="sh-h"><h3 id="wTitle">Покупка</h3><button class="x" data-close aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <p class="sh-sub" id="wSub"></p>
+  <div class="grid2">
+    <div class="stack" style="gap:8px"><div class="fl">Сумма</div><label class="field"><input id="wAmt" type="text" inputmode="decimal" placeholder="0" autocomplete="off"><span class="suf">₴</span></label></div>
+    <div class="stack" style="gap:8px"><div class="fl">Дата</div><label class="field"><input id="wDate" type="date"></label></div>
+  </div>
+  <label class="field"><input id="wNote" type="text" maxlength="50" placeholder="Где купил, например АТБ" autocomplete="off"></label>
+  <button class="togrow" id="wTx" type="button"><span>Записать как трату<span class="cnt" style="display:block;font-weight:500;margin-top:2px">Уменьшит общий баланс и попадёт в статистику</span></span><span class="switch" id="wTxSw" role="switch" aria-checked="true"></span></button>
+  <div class="collapse" id="wCatWrap"><div>
+    <div class="lbl2">Категория</div>
+    <div class="chips" id="wCats"></div>
+  </div></div>
+  <button class="btn" id="wSave" type="button">Отметить покупку</button>
+</section>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
@@ -611,6 +670,7 @@ var WIDGETS = [
   ['budget','Лимит на месяц','Сколько ещё можно тратить в день'],
   ['pace','Темп трат','Сегодня, в среднем и прогноз'],
   ['capital','Капитал','Баланс, биржа и долги вместе'],
+  ['cards','Прогрев карт','Какие карты пора погреть'],
   ['topcats','Топ категорий','Куда уходит больше всего'],
   ['recent','Последние операции','Пять последних записей']
 ];
@@ -683,7 +743,11 @@ var PR = { theme:'system', widgets: WIDGETS.map(function(w){ return {id:w[0], on
       if (Array.isArray(p.widgets)){
         var known = {}; WIDGETS.forEach(function(w){ known[w[0]] = 1; });
         var list = p.widgets.filter(function(w){ return w && known[w.id]; });
-        WIDGETS.forEach(function(w){ if (!list.some(function(x){ return x.id === w[0]; })) list.push({id:w[0], on:true}); });
+        WIDGETS.forEach(function(w, wi){
+          if (list.some(function(x){ return x.id === w[0]; })) return;
+          var pos = w[0] === 'cards' ? list.map(function(x){ return x.id; }).indexOf('payments') + 1 : list.length;
+          list.splice(pos > 0 ? pos : Math.min(wi, list.length), 0, {id:w[0], on:true});
+        });
         PR.widgets = list;
       }
     }
@@ -703,7 +767,7 @@ applyTheme();
 if (window.matchMedia) try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch(e){}
 
 /* ================= состояние ================= */
-var S = { tx:[], cats:[], assets:[], plans:[], settings:{startBalance:0}, me:'a', email:'', view:'home', month:curMonth(),
+var S = { tx:[], cats:[], assets:[], plans:[], cards:[], capMode:'capital', settings:{startBalance:0}, me:'a', email:'', view:'home', month:curMonth(),
   statsMode:'overview', statsWho:'all', histWho:'all', histType:'all', ready:{tx:false,cats:false} };
 var store = null;
 
@@ -734,6 +798,22 @@ function leftTotal(p){ return p.count > 0 ? Math.max(0, p.count - (p.paid || 0))
 function activePlans(){
   return S.plans.filter(function(p){ return !isDone(p); }).sort(function(a, b){ return nextDue(a).localeCompare(nextDue(b)); });
 }
+
+/* ---------- прогрев карт ---------- */
+var CARD_COLORS = ['#111827','#2F67F0','#16A34A','#DC2626','#7C3AED','#EA580C','#0891B2','#DB2777','#CA8A04','#475569','#0F766E','#9333EA','#B91C1C','#1D4ED8'];
+function addDays(s, n){ var d = toDate(s); d.setDate(d.getDate() + n); return dstr(d); }
+function cardLog(c){ return (c.log || []).filter(function(x){ return x && x.d; }).slice().sort(function(a, b){ return b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0); }); }
+function cardInfo(c){
+  var log = cardLog(c), last = log[0] || null, every = c.every || 30;
+  var deadline = last ? addDays(last.d, every) : null, left = deadline ? daysTo(deadline) : -9999;
+  var st = !last ? 'none' : left < 0 ? 'cold' : left <= 5 ? 'soon' : 'ok';
+  var m = curMonth(), ml = log.filter(function(x){ return x.d.slice(0,7) === m; });
+  return {log:log, last:last, every:every, deadline:deadline, left:left, st:st, monthN:ml.length, monthSum:ml.reduce(function(s, x){ return s + (x.a || 0); }, 0)};
+}
+function cardsSorted(){
+  return S.cards.map(function(c){ return {c:c, i:cardInfo(c)}; }).sort(function(a, b){ return a.i.left - b.i.left || String(a.c.bank).localeCompare(String(b.c.bank)); });
+}
+function cardName(c){ return (c.bank || 'Карта') + (c.last4 ? ' ••' + c.last4 : ''); }
 
 /* ================= хранилище: демо ================= */
 function makeDemo(){
@@ -778,19 +858,27 @@ function makeDemo(){
     {id:'a3', name:'Катя', kind:'owed', amount:140000, cur:'UAH', note:'Обещала вернуть в конце месяца', ts:3},
     {id:'a4', name:'Дима', kind:'debt', amount:150000, cur:'UAH', note:'', ts:4}
   ];
+  function wl(daysAgo, a, n){ return {d:ahead(-daysAgo), a:a * 100, n:n, t:daysAgo}; }
+  var cards = [
+    {id:'k1', bank:'Монобанк', last4:'4521', who:'a', every:30, color:'#111827', ts:1, log:[wl(27, 150, 'АТБ'), wl(58, 89, 'Кофе')]},
+    {id:'k2', bank:'ПриватБанк', last4:'0934', who:'a', every:30, color:'#16A34A', ts:2, log:[wl(34, 120, 'Сильпо')]},
+    {id:'k3', bank:'ПУМБ', last4:'7712', who:'n', every:30, color:'#DC2626', ts:3, log:[wl(5, 210, 'Аптека'), wl(36, 95, 'Метро')]},
+    {id:'k4', bank:'А-Банк', last4:'3308', who:'a', every:30, color:'#2F67F0', ts:4, log:[]},
+    {id:'k5', bank:'Sense Bank', last4:'1180', who:'n', every:45, color:'#7C3AED', ts:5, log:[wl(12, 60, 'Кофе')]}
+  ];
   return { tx:tx, categories:DEFAULT_CATS.map(function(c,i){ return {id:c[0], name:c[1], color:c[2], order:i}; }),
-    assets:assets, plans:plans, settings:{startBalance:1200000, usdtRate:4180, budget:3500000, seeded:true} };
+    assets:assets, plans:plans, cards:cards, settings:{startBalance:1200000, usdtRate:4180, budget:3500000, seeded:true} };
 }
 
 function DemoStore(){
-  var KEY = 'nashi-traty-demo-v2', data = null;
+  var KEY = 'nashi-traty-demo-v3', data = null;
   try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){}
-  if (!data || !data.tx || !data.plans || !data.assets) data = makeDemo();
+  if (!data || !data.tx || !data.plans || !data.assets || !data.cards) data = makeDemo();
   var subs = [];
   function emit(){
     subs.forEach(function(f){
       f('tx', data.tx.slice()); f('categories', data.categories.slice()); f('assets', data.assets.slice());
-      f('plans', data.plans.slice()); f('settings', Object.assign({}, data.settings));
+      f('plans', data.plans.slice()); f('cards', data.cards.slice()); f('settings', Object.assign({}, data.settings));
     });
   }
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e){} setTimeout(emit, 0); return Promise.resolve(); }
@@ -820,7 +908,7 @@ function FirebaseStore(db){
   return {
     listen: function(cb){
       var un = [];
-      ['tx','categories','assets','plans'].forEach(function(c){
+      ['tx','categories','assets','plans','cards'].forEach(function(c){
         un.push(db.collection(c).onSnapshot(function(s){ cb(c, s.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; })); }, dbErr));
       });
       un.push(setD.onSnapshot(function(d){
@@ -935,6 +1023,22 @@ function planRow(p, compact){
     '<span class="r"><span>' + (done ? '<span class="chipst ok">Выплачено</span>' : dueChip(nd)) + (compact ? '' : whoPill(p.who || 's')) + '</span><span class="cnt">' + esc(meta) + '</span></span>' + prog + '</span></button>' +
     (done ? '' : '<button class="paybtn" data-pay="' + esc(p.id) + '" aria-label="Отметить оплату: ' + esc(p.name) + '">' + CHECK + '</button>') + '</div>';
 }
+var FIRE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.5 3 3 4.5 3 8a3 3 0 0 1-6 0c0-1.2.4-2 1-2.8C8.2 9 6 11.4 6 14.5A6 6 0 0 0 18 14.5C18 9 13.5 6.5 12 3z"/></svg>';
+function cardIc(c){ return '<span class="cardic" style="background-color:' + okColor(c.color) + '">' + esc(c.last4 || '') + '</span>'; }
+function cardChip(i){
+  if (i.st === 'none') return '<span class="chipst late">Ещё не грели</span>';
+  if (i.st === 'cold') return '<span class="chipst late">Остыла · ' + (-i.left) + ' ' + plural(-i.left, 'день', 'дня', 'дней') + '</span>';
+  if (i.left === 0) return '<span class="chipst soon">Греть сегодня</span>';
+  if (i.st === 'soon') return '<span class="chipst soon">Греть до ' + shortDate(i.deadline).toLowerCase() + ' · ' + i.left + ' ' + plural(i.left, 'день', 'дня', 'дней') + '</span>';
+  return '<span class="chipst ok">Тёплая до ' + shortDate(i.deadline).toLowerCase() + '</span>';
+}
+function cardRow(x, compact){
+  var c = x.c, i = x.i;
+  return '<div class="prow"><button class="pmain" data-card="' + esc(c.id) + '">' + cardIc(c) +
+    '<span class="mid"><span class="r"><span class="t1">' + esc(c.bank || 'Карта') + '</span><span class="sum">' + (i.last ? money(i.last.a) : '—') + '</span></span>' +
+    '<span class="r"><span>' + cardChip(i) + (compact ? '' : whoPill(c.who || 'a')) + '</span><span class="cnt">' + (i.last ? esc(shortDate(i.last.d)) : '') + '</span></span></span></button>' +
+    '<button class="paybtn fire" data-warm="' + esc(c.id) + '" aria-label="Отметить покупку: ' + esc(cardName(c)) + '">' + FIRE + '</button></div>';
+}
 function assetGroupsUah(){
   var g = {exchange:0, frozen:0, owed:0, debt:0, other:0, usdt:0, frozenU:0, exchangeU:0};
   S.assets.forEach(function(a){
@@ -1013,6 +1117,14 @@ W.capital = function(){
     (g.usdt ? '<small>' + usdt(g.usdt) + ' на бирже</small>' : '') + '</div>';
   h += '<div class="trio"><div><small>Баланс</small><b>' + signed(balance(), true) + '</b></div><div><small>Биржа</small><b>' + (r || !g.usdt ? money(g.exchange + g.frozen, true) : usdt(g.usdt)) + '</b></div><div><small>Долги</small><b style="color:' + (g.owed - g.debt < 0 ? 'var(--danger)' : 'inherit') + '">' + (g.owed - g.debt > 0 ? '+' : '') + signed(g.owed - g.debt, true) + '</b></div></div>';
   if (g.usdt && !r) h += '<p class="note">Укажи курс USDT во вкладке «Капитал», чтобы биржа считалась в гривнах.</p>';
+  return h + '</section>';
+};
+W.cards = function(){
+  if (!S.cards.length) return '<section class="card"><h2>Прогрев карт</h2><p class="note" style="margin:0 0 12px">Добавь карты, которые нужно греть, и приложение подскажет, какую пора использовать.</p><button class="btn ghost sm" data-act="newcard">Добавить карту</button></section>';
+  var list = cardsSorted(), need = list.filter(function(x){ return x.i.st !== 'ok'; });
+  var h = '<section class="card"><h2>Прогрев карт<button class="link" data-go="cards">Все</button></h2>';
+  h += '<div class="bigrow"><div><small>Пора погреть</small><div class="bignum">' + need.length + ' ' + plural(need.length, 'карта', 'карты', 'карт') + '</div></div><small>из ' + list.length + '</small></div>';
+  h += need.length ? need.slice(0, 3).map(function(x){ return cardRow(x, true); }).join('') : '<div class="empty" style="padding:6px 8px 10px">Все карты тёплые. Ближайшая: ' + esc(cardName(list[0].c)) + ', до ' + esc(shortDate(list[0].i.deadline).toLowerCase()) + '.</div>';
   return h + '</section>';
 };
 W.topcats = function(){
@@ -1160,6 +1272,30 @@ function assetRow(a){
     '<span class="sumcol"><span class="sum' + (neg ? ' neg' : '') + '">' + (neg ? '−' : '') + inCur(a.amount, cur) + '</span>' + (other ? '<small>' + other + '</small>' : '') + '</span></button>';
 }
 function vCapital(){
+  return seg('cp-mode', 'data-cm', [['capital','Капитал'],['cards','Прогрев карт']], S.capMode) + (S.capMode === 'cards' ? vCards() : vCapitalMain());
+}
+function vCards(){
+  var list = cardsSorted(), m = curMonth();
+  var need = list.filter(function(x){ return x.i.st !== 'ok'; }).length, cold = list.filter(function(x){ return x.i.st === 'cold' || x.i.st === 'none'; }).length;
+  var all = [];
+  S.cards.forEach(function(c){ cardLog(c).forEach(function(e){ if (e.d.slice(0,7) === m) all.push({c:c, e:e}); }); });
+  all.sort(function(a, b){ return b.e.d.localeCompare(a.e.d) || (b.e.t || 0) - (a.e.t || 0); });
+  var mSum = all.reduce(function(s, x){ return s + (x.e.a || 0); }, 0);
+  var h = '<section class="hero"><div><div class="lbl">Пора погреть</div><div class="big">' + need + ' ' + plural(need, 'карта', 'карты', 'карт') + '</div>' +
+    '<div class="hsub">из ' + list.length + (cold ? ' · ' + cold + ' ' + plural(cold, 'остыла', 'остыли', 'остыли') + ' или ещё не грели' : '') + '</div></div>' +
+    '<div class="row"><div><small>Покупок за ' + esc(monthName(m)) + '</small><b>' + all.length + '</b></div><div><small>Потрачено на прогрев</small><b data-num="cd-sum" data-v="' + mSum + '"></b></div></div></section>';
+  h += '<section class="card"><h2>Карты<span class="cnt" style="text-transform:none;letter-spacing:0">сначала те, что пора греть</span></h2>';
+  h += list.length ? list.map(function(x){ return cardRow(x, false); }).join('') : '<div class="empty">Добавь карты, которые нужно греть: банк, последние 4 цифры и как часто греть.</div>';
+  h += '<div class="stack" style="margin-top:10px"><button class="btn ghost sm" data-act="newcard">Добавить карту</button></div>';
+  h += '<p class="note">Нажми 🔥 справа, чтобы отметить покупку. Нажми на карту, чтобы изменить её или посмотреть историю.</p></section>';
+  if (all.length){
+    h += '<section class="card"><h2>Покупки за ' + esc(monthName(m)) + '<span class="cnt" style="text-transform:none;letter-spacing:0">' + money(mSum) + '</span></h2>' + all.map(function(x){
+      return '<div class="hrow">' + cardIc(x.c) + '<span class="mid"><span class="t1">' + esc(x.c.bank || 'Карта') + '</span><span class="t2"><span class="nt">' + esc(shortDate(x.e.d)) + (x.e.n ? ' · ' + esc(x.e.n) : '') + '</span></span></span><span class="sum">' + money(x.e.a) + '</span></div>';
+    }).join('') + '</section>';
+  }
+  return h;
+}
+function vCapitalMain(){
   var r = rate(), g = assetGroupsUah();
   var h = '<section class="hero"><div><div class="lbl">Крипта на бирже</div><div class="big" data-num="cp-u" data-fmt="usdt" data-v="' + g.usdt + '"></div>' +
     '<div class="hsub">' + (r ? '≈ ' + money(toUah(g.usdt, 'USDT'), true) + ' по курсу ' + sp(NF.format(r / 100)) + ' ₴' : 'Укажи курс, чтобы видеть сумму в гривнах') + '</div></div>' +
@@ -1242,7 +1378,7 @@ function render(enter){
   else if (S.view === 'capital') html = vCapital();
   else if (S.view === 'settings') html = vSettings();
   else html = vHome();
-  var vk = S.view === 'stats' ? (S.statsMode === 'history' ? 'hist' : 'stats') : S.view;
+  var vk = S.view === 'stats' ? (S.statsMode === 'history' ? 'hist' : 'stats') : (S.view === 'capital' && S.capMode === 'cards' ? 'cards' : S.view);
   v.className = 'view v-' + vk + (enter && !REDUCED ? ' enter' : '');
   v.innerHTML = html;
   Array.prototype.forEach.call(v.children, function(c, i){ c.style.setProperty('--i', Math.min(i, 8)); });
@@ -1597,11 +1733,92 @@ $('#aDel').addEventListener('click', function(){
   store.del('assets', AS.id).catch(dbErr); toast('Удалено'); closeSheet();
 });
 
+/* ================= прогрев карт: шторки ================= */
+var KC = null;
+function openCard(c){
+  KC = c ? {id:c.id, orig:c, who:c.who || 'a', every:c.every || 30, color:okColor(c.color)} : {id:null, orig:null, who:S.me === 's' ? 'a' : S.me, every:30, color:CARD_COLORS[S.cards.length % CARD_COLORS.length]};
+  $('#kTitle').textContent = c ? cardName(c) : 'Новая карта';
+  $('#kBank').value = c ? (c.bank || '') : ''; $('#kLast').value = c ? (c.last4 || '') : '';
+  whoChips($('#kWho'), 'data-kw');
+  $('#kColors').innerHTML = CARD_COLORS.map(function(p){ return '<button type="button" data-kc="' + p + '" style="background:' + p + '" aria-label="Цвет ' + p + '"></button>'; }).join('');
+  renderCardHist();
+  var d = $('#kDel'); d.hidden = !c; d.classList.remove('armed'); d.textContent = 'Удалить карту';
+  syncCard(); openSheet('sCard');
+}
+function renderCardHist(){
+  var log = KC.orig ? cardLog(KC.orig) : [];
+  $('#kHistWrap').hidden = !log.length;
+  $('#kHist').innerHTML = log.map(function(e){
+    return '<div class="hrow"><span class="mid"><span class="t1">' + esc(dayLabel(e.d)) + '</span><span class="t2"><span class="nt">' + esc(e.n || 'Без комментария') + (e.tx ? ' · записано тратой' : '') + '</span></span></span><span class="sum">' + money(e.a) + '</span>' +
+      '<button type="button" class="hdel" data-hd="' + esc(e.d + '|' + (e.t || 0)) + '">Убрать</button></div>';
+  }).join('');
+}
+function syncCard(){
+  pressSet($('#kWho'), 'data-kw', KC.who);
+  var opts = ['14','30','45','60'], i = opts.indexOf(String(KC.every));
+  setSeg($('#kEvery'), i < 0 ? 1 : i); pressSet($('#kEvery'), 'data-ke', String(KC.every));
+  pressSet($('#kColors'), 'data-kc', KC.color);
+}
+$('#kWho').addEventListener('click', function(e){ var b = e.target.closest('[data-kw]'); if (b){ KC.who = b.getAttribute('data-kw'); syncCard(); } });
+$('#kEvery').addEventListener('click', function(e){ var b = e.target.closest('[data-ke]'); if (b){ KC.every = +b.getAttribute('data-ke'); syncCard(); } });
+$('#kColors').addEventListener('click', function(e){ var b = e.target.closest('[data-kc]'); if (b){ KC.color = b.getAttribute('data-kc'); syncCard(); } });
+$('#kLast').addEventListener('input', function(e){ var v = e.target.value.replace(/\D/g, '').slice(0, 4); if (v !== e.target.value) e.target.value = v; });
+$('#kHist').addEventListener('click', function(e){
+  var b = e.target.closest('[data-hd]'); if (!b || !KC.orig) return;
+  if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent = 'Точно?'; return; }
+  var key = b.getAttribute('data-hd'), log = (KC.orig.log || []).slice(), rm = null;
+  log = log.filter(function(x){ if (!rm && (x.d + '|' + (x.t || 0)) === key){ rm = x; return false; } return true; });
+  if (rm && rm.tx) store.del('tx', rm.tx).catch(dbErr);
+  KC.orig = Object.assign({}, KC.orig, {log:log});
+  store.patch('cards', KC.id, {log:log}).catch(dbErr);
+  renderCardHist(); toast(rm && rm.tx ? 'Покупка и трата убраны' : 'Покупка убрана');
+});
+$('#kSave').addEventListener('click', function(){
+  var bank = $('#kBank').value.trim().slice(0, 30), last4 = $('#kLast').value.trim();
+  if (!bank){ shake($('#kBank').parentNode); toast('Впиши банк'); return; }
+  if (last4 && !/^\d{4}$/.test(last4)){ shake($('#kLast').parentNode); toast('Нужны последние 4 цифры карты'); return; }
+  var d = {bank:bank, last4:last4, who:KC.who, every:KC.every, color:KC.color}, p;
+  if (KC.id) p = store.patch('cards', KC.id, d);
+  else { d.log = []; d.ts = Date.now(); p = store.put('cards', uid(), d); }
+  p.catch(dbErr); toast(KC.id ? 'Карта сохранена' : 'Карта добавлена'); closeSheet();
+});
+$('#kDel').addEventListener('click', function(){
+  if (!arm($('#kDel'), 'Удалить? Траты в балансе останутся')) return;
+  store.del('cards', KC.id).catch(dbErr); toast('Карта удалена'); closeSheet();
+});
+
+var WM = null;
+function openWarm(c){
+  var i = cardInfo(c);
+  WM = {c:c, tx:true, cat:catOf('c01') ? 'c01' : (S.cats[0] ? S.cats[0].id : null)};
+  $('#wTitle').textContent = cardName(c);
+  $('#wSub').textContent = i.last ? 'Последняя покупка ' + shortDate(i.last.d).toLowerCase() + ' на ' + money(i.last.a) : 'Первая покупка по этой карте';
+  $('#wAmt').value = ''; $('#wDate').value = today(); $('#wNote').value = '';
+  $('#wCats').innerHTML = S.cats.map(function(k){ return '<button type="button" class="chip" data-wc="' + esc(k.id) + '" style="--c:' + okColor(k.color) + '"><span class="dot" style="background:' + okColor(k.color) + '"></span>' + esc(k.name) + '</button>'; }).join('');
+  syncWarm(); openSheet('sWarm');
+}
+function syncWarm(){ $('#wTxSw').setAttribute('aria-checked', String(WM.tx)); $('#wCatWrap').classList.toggle('shut', !WM.tx); pressSet($('#wCats'), 'data-wc', WM.cat); }
+$('#wTx').addEventListener('click', function(){ WM.tx = !WM.tx; syncWarm(); });
+$('#wCats').addEventListener('click', function(e){ var b = e.target.closest('[data-wc]'); if (b){ WM.cat = b.getAttribute('data-wc'); syncWarm(); } });
+$('#wSave').addEventListener('click', function(){
+  var amt = parseMoney($('#wAmt').value), date = $('#wDate').value || today(), note = $('#wNote').value.trim().slice(0, 50), c = WM.c;
+  if (!(amt > 0)){ shake($('#wAmt').parentNode); toast('Впиши сумму покупки'); return; }
+  if (WM.tx && !catOf(WM.cat)){ shake($('#wCats')); toast('Выбери категорию'); return; }
+  var txId = WM.tx ? uid() : null, now = Date.now();
+  var chain = WM.tx ? store.put('tx', txId, {type:'expense', amount:amt, who:c.who || S.me, cat:WM.cat, date:date, note:('Прогрев ' + cardName(c) + (note ? ': ' + note : '')).slice(0, 80), by:S.email || 'demo', ts:now, card:c.id}) : Promise.resolve();
+  var log = (c.log || []).concat([{d:date, a:amt, n:note, tx:txId, t:now}]).slice(-120);
+  chain.then(function(){ return store.patch('cards', c.id, {log:log}); }).catch(dbErr);
+  vib(15); toast('Карта погрета до ' + shortDate(addDays(date, c.every || 30)).toLowerCase()); closeSheet();
+});
+
 /* ================= клики по экранам ================= */
 document.addEventListener('click', function(e){
-  var t = e.target.closest('[data-tab],[data-tx],[data-go],[data-m],[data-sm],[data-sw],[data-hw],[data-ht],[data-cat],[data-act],[data-plan],[data-pay],[data-asset],[data-th],[data-wup],[data-wdn],[data-wsw]');
+  var t = e.target.closest('[data-tab],[data-tx],[data-go],[data-m],[data-sm],[data-sw],[data-hw],[data-ht],[data-cat],[data-act],[data-plan],[data-pay],[data-asset],[data-th],[data-wup],[data-wdn],[data-wsw],[data-card],[data-warm],[data-cm]');
   if (!t || t.closest('.sheet')) return;
   if (t.hasAttribute('data-tab')) return go(t.getAttribute('data-tab'));
+  if (t.hasAttribute('data-card')){ var kc = byId(S.cards, t.getAttribute('data-card')); if (kc) openCard(kc); return; }
+  if (t.hasAttribute('data-warm')){ var kw = byId(S.cards, t.getAttribute('data-warm')); if (kw) openWarm(kw); return; }
+  if (t.hasAttribute('data-cm')){ S.capMode = t.getAttribute('data-cm'); return render(); }
   if (t.hasAttribute('data-tx')){ var tx = byId(S.tx, t.getAttribute('data-tx')); if (tx) openTx(tx); return; }
   if (t.hasAttribute('data-plan')){ var pl = byId(S.plans, t.getAttribute('data-plan')); if (pl) openPlan(pl); return; }
   if (t.hasAttribute('data-pay')){ var py = byId(S.plans, t.getAttribute('data-pay')); if (py) openPay(py); return; }
@@ -1609,6 +1826,8 @@ document.addEventListener('click', function(e){
   if (t.hasAttribute('data-go')){
     var g = t.getAttribute('data-go');
     if (g === 'history'){ S.statsMode = 'history'; S.month = curMonth(); return go('stats'); }
+    if (g === 'cards'){ S.capMode = 'cards'; if (S.view === 'capital') return render(true); return go('capital'); }
+    if (g === 'capital') S.capMode = 'capital';
     if (g === 'stats'){ S.statsMode = 'overview'; S.month = curMonth(); if (t.hasAttribute('data-who')) S.statsWho = t.getAttribute('data-who'); }
     return go(g);
   }
@@ -1630,6 +1849,7 @@ document.addEventListener('click', function(e){
   if (a === 'newcat') return openCat(null);
   if (a === 'newplan') return openPlan(null);
   if (a === 'newasset') return openAsset(null);
+  if (a === 'newcard') return openCard(null);
   if (a === 'bal') return editBalance();
   if (a === 'budget') return editBudget();
   if (a === 'rate') return editRate();
@@ -1658,6 +1878,7 @@ function onData(c, list){
   else if (c === 'categories'){ S.cats = list.slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name)); }); S.ready.cats = true; }
   else if (c === 'assets') S.assets = list.filter(function(a){ return a && typeof a.amount === 'number'; }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
   else if (c === 'plans') S.plans = list.filter(function(p){ return p && typeof p.amount === 'number' && /^\d{4}-\d{2}$/.test(p.start || ''); });
+  else if (c === 'cards') S.cards = list.filter(function(k){ return k && typeof k === 'object'; }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
   queueRender();
 }
 function startData(){ S.ready = {tx:false, cats:false}; unlisten = store.listen(onData); }
