@@ -1,5 +1,5 @@
 // Офлайн-кэш приложения. При обновлении файлов поменяй номер версии.
-var CACHE = 'nashi-traty-v1';
+var CACHE = 'nashi-traty-v3';
 var SHELL = ['./', './index.html', './config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
