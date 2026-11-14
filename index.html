@@ -1190,7 +1190,63 @@ function vHome(){
 }
 
 function vStats(){
-  return seg('st-mode', 'data-sm', [['overview','Обзор'],['history','История']], S.statsMode) + (S.statsMode === 'history' ? vHistory() : vOverview());
+  return seg('st-mode', 'data-sm', [['overview','Траты'],['income','Заработок'],['history','История']], S.statsMode) + (S.statsMode === 'history' ? vHistory() : S.statsMode === 'income' ? vIncome() : vOverview());
+}
+/* ===== Заработок: сколько и за что пришло (по категориям пополнений) ===== */
+function vIncome(){
+  var m = S.month, w = S.statsWho;
+  function f(t){ return t.type === 'income' && (w === 'all' || t.who === w); }
+  var list = txOfMonth(m).filter(f), total = sum(list), prev = sum(txOfMonth(shiftMonth(m, -1)).filter(f));
+  function ck(t){ return icatOf(t.cat) ? t.cat : '_none'; }
+  function cInfo(id){ var c = icatOf(id); return c ? {name:c.name, color:okColor(c.color)} : {name:'Без категории', color:'var(--inc)'}; }
+  var by = {}; list.forEach(function(t){ var k = ck(t); if (!by[k]) by[k] = {id:k, sum:0, n:0}; by[k].sum += t.amount; by[k].n++; });
+  var cats = Object.keys(by).map(function(k){ return by[k]; }).sort(function(a, b){ return b.sum - a.sum; });
+  var h = mSwitch() + seg('st-who', 'data-sw', whoOpts(), w);
+  var off = 0, ring = '';
+  cats.forEach(function(c){
+    var len = total ? c.sum / total * CIRC : 0, vis = cats.length > 1 ? Math.max(0, len - 2.2) : len;
+    ring += '<circle class="sg" cx="100" cy="100" r="80" stroke="' + cInfo(c.id).color + '" data-ak="in-d-' + esc(c.id) + '" data-kind="dash" data-a="' + vis.toFixed(2) + '" data-b="' + off.toFixed(2) + '"></circle>';
+    off += len;
+  });
+  h += '<section class="card"><div class="donut"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="ring" cx="100" cy="100" r="80"></circle>' + ring + '</svg>' +
+       '<div class="ctr"><small>' + (w === 'all' ? 'Заработано' : esc(PEOPLE[w].name)) + '</small><b data-num="in-tot" data-v="' + total + '" data-round></b></div></div>';
+  if (prev > 0 && total > 0){
+    var pc = Math.round((total - prev) / prev * 100);
+    h += '<div class="delta"><span class="' + (pc > 0 ? 'dn' : pc < 0 ? 'up' : '') + '">' + (pc > 0 ? '▲ ' + pc : pc < 0 ? '▼ ' + (-pc) : '0') + '% к прошлому месяцу</span></div>';
+  } else h += '<div class="delta"><span>' + (list.length ? list.length + ' ' + plural(list.length, 'пополнение', 'пополнения', 'пополнений') : 'В этом месяце пополнений нет') + '</span></div>';
+  var sel = S.incCat && by[S.incCat] ? S.incCat : null;
+  h += cats.length ? cats.map(function(c){
+    var ci = cInfo(c.id), p = total ? c.sum / total * 100 : 0;
+    return '<button class="lg" data-ic="' + esc(c.id) + '" style="width:100%;text-align:left' + (sel && sel !== c.id ? ';opacity:.45' : '') + '"><span class="dot" style="background:' + ci.color + '"></span><div class="mid"><div class="lt"><span>' + esc(ci.name) + ' <span class="cnt">· ' + c.n + '</span></span><b>+' + money(c.sum, true) + '</b></div>' +
+      '<div class="track"><span class="fill" data-ak="in-l-' + esc(c.id) + '" data-kind="w" data-a="' + (c.sum / cats[0].sum * 100).toFixed(2) + '" style="background:' + ci.color + '"></span></div></div><span class="pct">' + (p < 1 && p > 0 ? '<1' : Math.round(p)) + '%</span></button>';
+  }).join('') : '<div class="empty">Добавь пополнение с категорией, и здесь появится, за что сколько пришло.</div>';
+  h += '</section>';
+
+  // 6 месяцев: столбики по категориям
+  var ms = []; for (var i = 5; i >= 0; i--) ms.push(shiftMonth(m, -i));
+  var mon = ms.map(function(mm){ var r = {m:mm, t:0, c:{}}; txOfMonth(mm).filter(f).forEach(function(t){ var k = ck(t); r.c[k] = (r.c[k] || 0) + t.amount; r.t += t.amount; }); return r; });
+  var mx = 1; mon.forEach(function(r){ if (r.t > mx) mx = r.t; });
+  var avg = sum(mon.map(function(r){ return {amount:r.t}; })) / 6;
+  h += '<section class="card"><h2>За полгода <span class="cnt" style="text-transform:none;letter-spacing:0">в среднем ' + money(avg, true) + ' в месяц</span></h2><div class="days" style="gap:10px" aria-hidden="true">';
+  mon.forEach(function(r, j){
+    var ks = Object.keys(r.c).sort(function(a, b){ return r.c[b] - r.c[a]; });
+    h += '<div class="day' + (r.m === m ? ' today' : '') + '">' + (r.t ? ks.map(function(k){ return '<i data-ak="in-m-' + j + '-' + esc(k) + '" data-kind="h" data-a="' + (r.c[k] / mx * 100).toFixed(2) + '" style="background:' + cInfo(k).color + '"></i>'; }).join('') : '<i class="z"></i>') + '</div>';
+  });
+  h += '</div><div class="dl" style="gap:10px" aria-hidden="true">' + mon.map(function(r){ return '<span>' + esc(monthName(r.m).slice(0, 3)) + '</span>'; }).join('') + '</div>' +
+    '<div class="dl" style="gap:10px;margin-top:4px;color:var(--ink);font-weight:600" aria-hidden="true">' + mon.map(function(r){ return '<span>' + (r.t ? shortK(r.t) : '—') + '</span>'; }).join('') + '</div></section>';
+
+  // с начала года по категориям
+  var y = m.slice(0, 4), yl = S.tx.filter(function(t){ return f(t) && String(t.date).slice(0, 4) === y && t.date.slice(0, 7) <= m; }), yt = sum(yl), yb = {};
+  yl.forEach(function(t){ var k = ck(t); yb[k] = (yb[k] || 0) + t.amount; });
+  var yk = Object.keys(yb).sort(function(a, b){ return yb[b] - yb[a]; });
+  if (yk.length) h += '<section class="card"><h2>С начала ' + y + ' года <span class="cnt" style="text-transform:none;letter-spacing:0">всего +' + money(yt, true) + '</span></h2>' +
+    yk.map(function(k){ var ci = cInfo(k); return '<div class="kv"><span><span class="dot" style="background:' + ci.color + '"></span>' + esc(ci.name) + '</span><b>+' + money(yb[k], true) + ' <span class="cnt">· ' + Math.round(yb[k] / yt * 100) + '%</span></b></div>'; }).join('') + '</section>';
+
+  // сами пополнения (по выбранной категории или все)
+  var rows = list.filter(function(t){ return !sel || ck(t) === sel; }).sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0); });
+  if (rows.length) h += '<section class="card"><h2>' + (sel ? esc(cInfo(sel).name) : 'Все пополнения') + ' <span class="cnt" style="text-transform:none;letter-spacing:0">' + rows.length + '</span></h2><div>' + rows.slice(0, 40).map(txRow).join('') + '</div>' +
+    (sel ? '<p class="note">Нажми на категорию ещё раз, чтобы показать все.</p>' : '<p class="note">Нажми на категорию выше, чтобы увидеть только её.</p>') + '</section>';
+  return h;
 }
 function vOverview(){
   var m = S.month, w = S.statsWho;
@@ -1876,7 +1932,7 @@ $('#wSave').addEventListener('click', function(){
 
 /* ================= клики по экранам ================= */
 document.addEventListener('click', function(e){
-  var t = e.target.closest('[data-tab],[data-tx],[data-go],[data-m],[data-sm],[data-sw],[data-hw],[data-ht],[data-cat],[data-act],[data-plan],[data-pay],[data-asset],[data-th],[data-wup],[data-wdn],[data-wsw],[data-card],[data-warm],[data-cm]');
+  var t = e.target.closest('[data-tab],[data-ic],[data-tx],[data-go],[data-m],[data-sm],[data-sw],[data-hw],[data-ht],[data-cat],[data-act],[data-plan],[data-pay],[data-asset],[data-th],[data-wup],[data-wdn],[data-wsw],[data-card],[data-warm],[data-cm]');
   if (!t || t.closest('.sheet')) return;
   if (t.hasAttribute('data-tab')) return go(t.getAttribute('data-tab'));
   if (t.hasAttribute('data-card')){ var kc = byId(S.cards, t.getAttribute('data-card')); if (kc) openCard(kc); return; }
@@ -1896,6 +1952,7 @@ document.addEventListener('click', function(e){
   }
   if (t.hasAttribute('data-m')){ if (t.disabled) return; S.month = shiftMonth(S.month, +t.getAttribute('data-m')); return render(); }
   if (t.hasAttribute('data-sm')){ S.statsMode = t.getAttribute('data-sm'); return render(); }
+  if (t.hasAttribute('data-ic')){ var ic = t.getAttribute('data-ic'); S.incCat = S.incCat === ic ? null : ic; return render(); }
   if (t.hasAttribute('data-sw')){ S.statsWho = t.getAttribute('data-sw'); return render(); }
   if (t.hasAttribute('data-hw')){ S.histWho = t.getAttribute('data-hw'); return render(); }
   if (t.hasAttribute('data-ht')){ S.histType = t.getAttribute('data-ht'); return render(); }
