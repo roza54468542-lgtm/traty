@@ -491,7 +491,7 @@ input{font:inherit;color:inherit}
   <div class="amtd zero" id="fAmt">0<span class="cur">₴</span></div>
   <div class="whos" id="fWho"></div>
   <div class="collapse" id="fCatWrap"><div>
-    <div class="lbl2">Категория</div>
+    <div class="lbl2" id="fCatL">Категория</div>
     <div class="chips" id="fCats"></div>
   </div></div>
   <div class="row2">
@@ -661,6 +661,11 @@ var DEFAULT_CATS = [
   ['c10','Подписки','#6366F1'],['c11','Красота и уход','#D946EF'],['c12','Другое','#64748B'],
   ['c13',LOAN_CAT,'#0EA5E9']
 ];
+// категории пополнений (kind:'inc'); i02 — P2P: туда сервер «Лимитов» каждую ночь пишет профит
+var DEFAULT_INC = [
+  ['i01','Зарплата','#10B981'],['i02','P2P','#F59E0B'],['i03','Подарок','#EC4899'],
+  ['i04','Возврат долга','#3B82F6'],['i05','Подработка','#8B5CF6'],['i06','Другое','#64748B']
+];
 var PALETTE = ['#F59E0B','#EF4444','#F97316','#E11D48','#EC4899','#D946EF','#8B5CF6','#6366F1','#3B82F6','#0EA5E9','#06B6D4','#14B8A6','#10B981','#64748B'];
 var PK = {
   credit:  {name:'Кредит',     color:'#EF4444'},
@@ -792,11 +797,12 @@ applyTheme();
 if (window.matchMedia) try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch(e){}
 
 /* ================= состояние ================= */
-var S = { tx:[], cats:[], assets:[], plans:[], cards:[], capMode:'capital', settings:{startBalance:0}, me:'a', email:'', view:'home', month:curMonth(),
+var S = { tx:[], cats:[], icats:[], assets:[], plans:[], cards:[], capMode:'capital', settings:{startBalance:0}, me:'a', email:'', view:'home', month:curMonth(),
   statsMode:'overview', statsWho:'all', histWho:'all', histType:'all', ready:{tx:false,cats:false} };
 var store = null;
 
-function catOf(id){ for (var i = 0; i < S.cats.length; i++) if (S.cats[i].id === id) return S.cats[i]; return null; }
+function catOf(id){ for (var i = 0; i < S.cats.length; i++) if (S.cats[i].id === id) return S.cats[i]; for (var j = 0; j < (S.icats || []).length; j++) if (S.icats[j].id === id) return S.icats[j]; return null; }
+function icatOf(id){ var c = catOf(id); return c && c.kind === 'inc' ? c : null; }
 function byId(list, id){ for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
 function sortTx(a, b){ return (b.date || '').localeCompare(a.date || '') || (b.ts || 0) - (a.ts || 0); }
 function txOfMonth(m){ return S.tx.filter(function(t){ return t.date && t.date.slice(0,7) === m; }); }
@@ -891,7 +897,7 @@ function makeDemo(){
     {id:'k4', bank:'А-Банк', last4:'3308', who:'a', every:30, color:'#2F67F0', ts:4, log:[]},
     {id:'k5', bank:'Sense Bank', last4:'1180', who:'n', every:45, color:'#7C3AED', ts:5, log:[wl(12, 60, 'Кофе')]}
   ];
-  return { tx:tx, categories:DEFAULT_CATS.map(function(c,i){ return {id:c[0], name:c[1], color:c[2], order:i}; }),
+  return { tx:tx, categories:DEFAULT_CATS.map(function(c,i){ return {id:c[0], name:c[1], color:c[2], order:i}; }).concat(DEFAULT_INC.map(function(c,i){ return {id:c[0], name:c[1], color:c[2], order:i, kind:'inc'}; })),
     assets:assets, plans:plans, cards:cards, settings:{startBalance:1200000, usdtRate:4180, budget:3500000, seeded:true} };
 }
 
@@ -927,7 +933,14 @@ function FirebaseStore(db){
   function seed(){
     var b = db.batch();
     DEFAULT_CATS.forEach(function(c, i){ b.set(db.collection('categories').doc(c[0]), {name:c[1], color:c[2], order:i}); });
-    b.set(setD, {seeded:true}, {merge:true});
+    DEFAULT_INC.forEach(function(c, i){ b.set(db.collection('categories').doc(c[0]), {name:c[1], color:c[2], order:i, kind:'inc'}); });
+    b.set(setD, {seeded:true, incSeeded:true}, {merge:true});
+    return b.commit();
+  }
+  function seedInc(){   // уже работающая база: один раз добавляем категории пополнений
+    var b = db.batch();
+    DEFAULT_INC.forEach(function(c, i){ b.set(db.collection('categories').doc(c[0]), {name:c[1], color:c[2], order:i, kind:'inc'}, {merge:true}); });
+    b.set(setD, {incSeeded:true}, {merge:true});
     return b.commit();
   }
   return {
@@ -940,6 +953,7 @@ function FirebaseStore(db){
         var o = d.exists ? d.data() : {};
         cb('settings', o);
         if (!d.metadata.fromCache && !o.seeded) seed().catch(dbErr);
+        else if (!d.metadata.fromCache && !o.incSeeded) seedInc().catch(dbErr);
       }, dbErr));
       return function(){ un.forEach(function(f){ f(); }); };
     },
@@ -1014,9 +1028,9 @@ var CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentCol
 function whoPill(w){ return '<span class="who ' + esc(w) + '">' + esc(PEOPLE[w] ? PEOPLE[w].name : '?') + '</span>'; }
 function letterOf(s){ return esc(String(s || '?').trim().charAt(0).toUpperCase() || '?'); }
 function txRow(t){
-  var inc = t.type === 'income', c = inc ? null : catOf(t.cat);
-  var color = inc ? 'var(--inc)' : (c ? okColor(c.color) : 'var(--nocat)');
-  var title = inc ? 'Пополнение' : (c ? c.name : 'Без категории');
+  var inc = t.type === 'income', c = inc ? icatOf(t.cat) : catOf(t.cat);
+  var color = inc ? (c ? okColor(c.color) : 'var(--inc)') : (c ? okColor(c.color) : 'var(--nocat)');
+  var title = inc ? (c ? c.name : 'Пополнение') : (c ? c.name : 'Без категории');
   return '<button class="tx" data-tx="' + esc(t.id) + '"><span class="ic" style="background:' + color + '">' + (inc ? '+' : letterOf(c ? c.name : '?')) + '</span>' +
     '<span class="mid"><span class="t1">' + esc(title) + '</span><span class="t2">' + whoPill(t.who) + (t.note ? '<span class="nt">' + esc(t.note) + '</span>' : '') + '</span></span>' +
     '<span class="sum' + (inc ? ' inc' : '') + '">' + (inc ? '+' : '−') + money(t.amount) + '</span></button>';
@@ -1240,6 +1254,15 @@ function vOverview(){
     '<div class="kv"><span>Траты</span><b>−' + money(total) + '</b></div>' +
     '<div class="kv"><span>Разница</span><b style="color:' + (got - total >= 0 ? 'var(--inc)' : 'var(--danger)') + '">' + (got - total >= 0 ? '+' : '−') + money(Math.abs(got - total)) + '</b></div></section>';
 
+  if (inc.length){
+    var byI = {}; inc.forEach(function(t){ var k = icatOf(t.cat) ? t.cat : '_none'; if (!byI[k]) byI[k] = {id:k, sum:0, n:0}; byI[k].sum += t.amount; byI[k].n++; });
+    var il = Object.keys(byI).map(function(k){ return byI[k]; }).sort(function(a, b){ return b.sum - a.sum; });
+    h += '<section class="card"><h2>Откуда пополнения</h2>' + il.map(function(c){
+      var ci = icatOf(c.id), col = ci ? okColor(ci.color) : 'var(--inc)', p = got ? c.sum / got * 100 : 0;
+      return '<div class="lg"><span class="dot" style="background:' + col + '"></span><div class="mid"><div class="lt"><span>' + esc(ci ? ci.name : 'Без категории') + ' <span class="cnt">· ' + c.n + '</span></span><b>+' + money(c.sum, true) + '</b></div>' +
+        '<div class="track"><span class="fill" data-ak="st-i-' + esc(c.id) + '" data-kind="w" data-a="' + (c.sum / il[0].sum * 100).toFixed(2) + '" style="background:' + col + '"></span></div></div><span class="pct">' + (p < 1 && p > 0 ? '<1' : Math.round(p)) + '%</span></div>';
+    }).join('') + '</section>';
+  }
   var top = exp.slice().sort(function(a, b){ return b.amount - a.amount; }).slice(0, 5);
   if (top.length) h += '<section class="card"><h2>Самые крупные траты</h2><div>' + top.map(txRow).join('') + '</div></section>';
   return h;
@@ -1382,6 +1405,14 @@ function vSettings(){
       return '<button class="crow" data-cat="' + esc(c.id) + '"><span class="sw" style="background:' + okColor(c.color) + '"></span><span class="mid"><span>' + esc(c.name) + '</span><span class="cnt">' + (n ? n + ' ' + plural(n, 'операция', 'операции', 'операций') : 'Пока без трат') + '</span></span>' + CHEV + '</button>';
     }).join('') +
     '</div><div class="stack" style="margin-top:10px"><button class="btn ghost sm" data-act="newcat">Добавить категорию</button></div></section>';
+  var icats = S.icats || [];
+  h += '<section class="card"><h2>Категории пополнений <span class="cnt" style="text-transform:none;letter-spacing:0">' + icats.length + '</span></h2><div>' +
+    icats.map(function(c){
+      var n = counts[c.id] || 0;
+      return '<button class="crow" data-cat="' + esc(c.id) + '"><span class="sw" style="background:' + okColor(c.color) + '"></span><span class="mid"><span>' + esc(c.name) + '</span><span class="cnt">' + (n ? n + ' ' + plural(n, 'пополнение', 'пополнения', 'пополнений') : 'Пока без пополнений') + '</span></span>' + CHEV + '</button>';
+    }).join('') +
+    '</div><div class="stack" style="margin-top:10px"><button class="btn ghost sm" data-act="newicat">Добавить категорию пополнений</button></div>' +
+    (icatOf('i02') ? '<p class="note">«' + esc(icatOf('i02').name) + '» — сюда «Лимиты» каждую ночь записывают профит за день.</p>' : '') + '</section>';
   if (DEMO){
     h += '<section class="card"><h2>Демо-режим</h2><p class="note" style="margin-top:0">Сейчас данные с примерами и хранятся только на этом устройстве. Когда подключишь базу Firebase в файле config.js, приложение станет общим для двоих.</p>' +
       '<div class="stack" style="margin-top:12px"><button class="btn ghost sm" data-act="reset">Вернуть примеры</button></div></section>';
@@ -1484,20 +1515,25 @@ function openTx(t){
         : {mode:'add', id:null, type:'expense', amt:'', who:S.me, cat:null, date:today(), note:''};
   $('#txTitle').textContent = F.mode === 'edit' ? 'Изменить' : 'Новая операция';
   whoChips($('#fWho'), 'data-fw');
-  $('#fCats').innerHTML = S.cats.length ? S.cats.map(function(c){ return '<button type="button" class="chip" data-fc="' + esc(c.id) + '" style="--c:' + okColor(c.color) + '"><span class="dot" style="background:' + okColor(c.color) + '"></span>' + esc(c.name) + '</button>'; }).join('')
-    : '<span class="cnt">Категорий нет. Добавь их в настройках.</span>';
+  fillCats();
   $('#fNote').value = F.note;
   $('#fDate').value = F.date;
   var del = $('#fDel'); del.hidden = F.mode !== 'edit'; del.classList.remove('armed'); del.textContent = 'Удалить';
   syncTx(); updAmt(true);
   openSheet('sTx');
 }
+function fillCats(){
+  var list = F.type === 'income' ? (S.icats || []) : S.cats;
+  $('#fCats').innerHTML = list.length ? list.map(function(c){ return '<button type="button" class="chip" data-fc="' + esc(c.id) + '" style="--c:' + okColor(c.color) + '"><span class="dot" style="background:' + okColor(c.color) + '"></span>' + esc(c.name) + '</button>'; }).join('')
+    : '<span class="cnt">Категорий нет. Добавь их в настройках.</span>';
+  $('#fCatL').textContent = F.type === 'income' ? 'Откуда деньги' : 'Категория';
+}
 function syncTx(){
   setSeg($('#fType'), F.type === 'income' ? 1 : 0);
   pressSet($('#fType'), 'data-ft', F.type);
   pressSet($('#fWho'), 'data-fw', F.who);
   pressSet($('#fCats'), 'data-fc', F.cat);
-  $('#fCatWrap').classList.toggle('shut', F.type === 'income');
+
   $('#fDateTxt').textContent = shortDate(F.date);
   var s = $('#fSave'); s.disabled = !(amtKop(F.amt) > 0);
   s.textContent = F.mode === 'edit' ? 'Сохранить' : (F.type === 'income' ? 'Добавить пополнение' : 'Добавить трату');
@@ -1523,7 +1559,7 @@ function press(k){
   F.amt = s; updAmt();
 }
 $('#pad').addEventListener('click', function(e){ var b = e.target.closest('[data-k]'); if (b) press(b.getAttribute('data-k')); });
-$('#fType').addEventListener('click', function(e){ var b = e.target.closest('[data-ft]'); if (!b) return; F.type = b.getAttribute('data-ft'); if (F.type === 'income' && F.mode === 'add' && F.who === 's') F.who = S.me; syncTx(); });
+$('#fType').addEventListener('click', function(e){ var b = e.target.closest('[data-ft]'); if (!b) return; var nt = b.getAttribute('data-ft'); if (nt !== F.type){ F.type = nt; F.cat = null; fillCats(); } if (F.type === 'income' && F.mode === 'add' && F.who === 's') F.who = S.me; syncTx(); });
 $('#fWho').addEventListener('click', function(e){ var b = e.target.closest('[data-fw]'); if (b){ F.who = b.getAttribute('data-fw'); syncTx(); } });
 $('#fCats').addEventListener('click', function(e){ var b = e.target.closest('[data-fc]'); if (b){ F.cat = b.getAttribute('data-fc'); syncTx(); } });
 $('#fDate').addEventListener('change', function(e){ if (e.target.value){ F.date = e.target.value; syncTx(); } });
@@ -1533,7 +1569,7 @@ $('#fSave').addEventListener('click', function(){
   var kop = amtKop(F.amt);
   if (!kop) return shake($('#fAmt'));
   if (F.type === 'expense' && !catOf(F.cat)){ shake($('#fCats')); toast('Выбери категорию'); return; }
-  var d = {type:F.type, amount:kop, who:F.who, cat:F.type === 'expense' ? F.cat : null, date:F.date || today(), note:(F.note || '').trim().slice(0, 80)};
+  var d = {type:F.type, amount:kop, who:F.who, cat:F.type === 'expense' ? F.cat : (icatOf(F.cat) ? F.cat : null), date:F.date || today(), note:(F.note || '').trim().slice(0, 80)};
   var p;
   if (F.mode === 'edit') p = store.patch('tx', F.id, d);
   else { d.by = S.email || 'demo'; d.ts = Date.now(); p = store.put('tx', uid(), d); }
@@ -1557,9 +1593,10 @@ document.addEventListener('keydown', function(e){
 
 /* ================= категории ================= */
 var C = null;
-function openCat(c){
-  C = c ? {id:c.id, name:c.name, color:okColor(c.color)} : {id:null, name:'', color:PALETTE[(S.cats.length * 3) % PALETTE.length]};
-  $('#catTitle').textContent = c ? 'Категория' : 'Новая категория';
+function openCat(c, kind){
+  var inc = c ? c.kind === 'inc' : kind === 'inc', pool = inc ? (S.icats || []) : S.cats;
+  C = c ? {id:c.id, name:c.name, color:okColor(c.color), inc:inc} : {id:null, name:'', color:PALETTE[(pool.length * 3 + (inc ? 5 : 0)) % PALETTE.length], inc:inc};
+  $('#catTitle').textContent = inc ? (c ? 'Категория пополнений' : 'Новая категория пополнений') : (c ? 'Категория' : 'Новая категория');
   $('#cName').value = C.name;
   $('#cColors').innerHTML = PALETTE.map(function(p){ return '<button type="button" data-cc="' + p + '" style="background:' + p + '" aria-label="Цвет ' + p + '"></button>'; }).join('');
   pressSet($('#cColors'), 'data-cc', C.color);
@@ -1570,14 +1607,15 @@ $('#cColors').addEventListener('click', function(e){ var b = e.target.closest('[
 $('#cSave').addEventListener('click', function(){
   var name = $('#cName').value.trim().slice(0, 24);
   if (!name){ shake($('#cName').parentNode); return; }
-  if (S.cats.some(function(c){ return c.id !== C.id && c.name.toLowerCase() === name.toLowerCase(); })){ toast('Такая категория уже есть'); return; }
+  var pool = C.inc ? (S.icats || []) : S.cats;
+  if (pool.some(function(c){ return c.id !== C.id && c.name.toLowerCase() === name.toLowerCase(); })){ toast('Такая категория уже есть'); return; }
   var p;
   if (C.id) p = store.patch('categories', C.id, {name:name, color:C.color});
-  else { var mx = -1; S.cats.forEach(function(c){ if ((c.order || 0) > mx) mx = c.order || 0; }); p = store.put('categories', uid(), {name:name, color:C.color, order:mx + 1}); }
+  else { var mx = -1; pool.forEach(function(c){ if ((c.order || 0) > mx) mx = c.order || 0; }); var nc = {name:name, color:C.color, order:mx + 1}; if (C.inc) nc.kind = 'inc'; p = store.put('categories', uid(), nc); }
   p.catch(dbErr); toast(C.id ? 'Категория сохранена' : 'Категория добавлена'); closeSheet();
 });
 $('#cDel').addEventListener('click', function(){
-  if (!arm($('#cDel'), 'Удалить? Траты останутся «без категории»')) return;
+  if (!arm($('#cDel'), C.inc ? 'Удалить? Пополнения останутся без категории' : 'Удалить? Траты останутся «без категории»')) return;
   store.del('categories', C.id).catch(dbErr); toast('Категория удалена'); closeSheet();
 });
 
@@ -1872,6 +1910,7 @@ document.addEventListener('click', function(e){
   }
   var a = t.getAttribute('data-act');
   if (a === 'newcat') return openCat(null);
+  if (a === 'newicat') return openCat(null, 'inc');
   if (a === 'newplan') return openPlan(null);
   if (a === 'newasset') return openAsset(null);
   if (a === 'newcard') return openCard(null);
@@ -1900,7 +1939,10 @@ function show(id){ ['splash','login','main'].forEach(function(x){ document.getEl
 function onData(c, list){
   if (c === 'settings') S.settings = list || {};
   else if (c === 'tx'){ S.tx = list.filter(function(t){ return t && typeof t.amount === 'number' && t.date; }); S.ready.tx = true; }
-  else if (c === 'categories'){ S.cats = list.slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name)); }); S.ready.cats = true; }
+  else if (c === 'categories'){
+    var srt = list.slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name)); });
+    S.cats = srt.filter(function(x){ return x.kind !== 'inc'; }); S.icats = srt.filter(function(x){ return x.kind === 'inc'; }); S.ready.cats = true;
+  }
   else if (c === 'assets') S.assets = list.filter(function(a){ return a && typeof a.amount === 'number'; }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
   else if (c === 'plans') S.plans = list.filter(function(p){ return p && typeof p.amount === 'number' && /^\d{4}-\d{2}$/.test(p.start || ''); });
   else if (c === 'cards') S.cards = list.filter(function(k){ return k && typeof k === 'object'; }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
